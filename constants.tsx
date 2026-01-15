@@ -1,3 +1,4 @@
+
 import { DaySchedule, EventType } from './types';
 
 export const CATEGORY_STYLES = {
@@ -24,6 +25,12 @@ export const CATEGORY_STYLES = {
     textColor: 'text-emerald-600',
     border: 'border-emerald-400',
     icon: 'menu_book'
+  },
+  [EventType.TRANSPORTE]: {
+    color: 'bg-purple-500',
+    textColor: 'text-purple-600',
+    border: 'border-purple-400',
+    icon: 'directions_bus'
   }
 };
 
@@ -33,11 +40,21 @@ export const SCHEDULE_DATA: DaySchedule[] = [
     date: '15/01',
     weekday: 'Qui',
     events: [
-      { id: '1-1', startTime: '08:00', endTime: '09:30', title: 'Recepção e café da manhã', type: EventType.REFEICOES },
-      { id: '1-2', startTime: '09:30', endTime: '12:00', title: 'Abertura da Conferência', type: EventType.MENSAGENS },
+      { id: '1-1', startTime: '08:00', endTime: '10:00', title: 'Recepção e Café da manhã', type: EventType.REFEICOES },
+      { id: '1-2', startTime: '10:00', endTime: '12:30', title: 'Abertura da Conferência', type: EventType.MENSAGENS },
       { id: '1-3', startTime: '12:30', endTime: '14:00', title: 'Almoço', type: EventType.REFEICOES },
-      { id: '1-4', startTime: '14:00', endTime: '16:00', title: 'Atividade especial + Reunião de monitores', type: EventType.ATIVIDADES },
-      { id: '1-5', startTime: '16:00', endTime: '18:30', title: 'Banho', type: EventType.ROTINA },
+      { 
+        id: '1-4', 
+        startTime: '14:00', 
+        endTime: '15:30', 
+        title: 'Atividades Paralelas', 
+        type: EventType.ATIVIDADES,
+        sessions: [
+          { audience: 'Todos', title: 'Atividade Especial (Jovens e Adolescentes)' },
+          { audience: 'Todos', title: 'Reunião de Monitores' }
+        ]
+      },
+      { id: '1-5', startTime: '15:30', endTime: '18:30', title: 'Banho', type: EventType.ROTINA },
       { id: '1-6', startTime: '18:30', endTime: '19:30', title: 'Jantar', type: EventType.REFEICOES },
       { 
         id: '1-7', 
@@ -52,8 +69,9 @@ export const SCHEDULE_DATA: DaySchedule[] = [
       },
       { id: '1-8', startTime: '21:30', endTime: '22:00', title: 'Lanche', type: EventType.REFEICOES },
       { id: '1-9', startTime: '22:00', endTime: '22:45', title: 'Livre / Convivência', type: EventType.ROTINA },
-      { id: '1-10', startTime: '22:45', endTime: '23:30', title: 'Deslocamento para quartos', type: EventType.ROTINA },
-      { id: '1-11', startTime: '23:30', endTime: '00:00', title: 'Oração e apagar as luzes', type: EventType.ROTINA },
+      { id: '1-10', startTime: '22:30', endTime: '23:00', title: 'Ônibus — Chácara → Hospedagens', type: EventType.TRANSPORTE },
+      { id: '1-11', startTime: '22:45', endTime: '23:30', title: 'Deslocamento para quartos', type: EventType.ROTINA },
+      { id: '1-12', startTime: '23:30', endTime: '00:00', title: 'Oração e apagar as luzes', type: EventType.ROTINA },
     ]
   },
   {
@@ -61,13 +79,13 @@ export const SCHEDULE_DATA: DaySchedule[] = [
     date: '16/01',
     weekday: 'Sex',
     events: [
-      { id: '2-1', startTime: '07:00', endTime: '08:00', title: 'Despertar', type: EventType.ROTINA },
+      { id: '2-1', startTime: '07:30', endTime: '08:00', title: 'Ônibus — Hospedagens → Chácara', type: EventType.TRANSPORTE },
       { id: '2-2', startTime: '08:00', endTime: '09:30', title: 'Café da manhã', type: EventType.REFEICOES },
       { id: '2-3', startTime: '09:30', endTime: '10:00', title: 'Leitura Bíblica', type: EventType.MENSAGENS },
       { 
         id: '2-4', 
         startTime: '10:00', 
-        endTime: '12:00', 
+        endTime: '12:30', 
         title: 'Mensagem 2', 
         type: EventType.MENSAGENS,
         sessions: [
@@ -76,11 +94,23 @@ export const SCHEDULE_DATA: DaySchedule[] = [
         ]
       },
       { id: '2-5', startTime: '12:30', endTime: '14:00', title: 'Almoço', type: EventType.REFEICOES },
-      { id: '2-6', startTime: '14:00', endTime: '16:00', title: 'Gincana Adolescentes + Atividade Jovens', type: EventType.ATIVIDADES },
-      { id: '2-7', startTime: '16:00', endTime: '18:30', title: 'Banho', type: EventType.ROTINA },
-      { id: '2-8', startTime: '18:30', endTime: '19:30', title: 'Jantar', type: EventType.REFEICOES },
       { 
-        id: '2-9', 
+        id: '2-6', 
+        startTime: '14:00', 
+        endTime: '16:00', 
+        title: 'Gincana e Atividades', 
+        type: EventType.ATIVIDADES,
+        sessions: [
+          { audience: 'Adolescentes', title: 'Gincana Adolescentes' },
+          { audience: 'Jovens', title: 'Atividade Jovens' }
+        ]
+      },
+      { id: '2-7', startTime: '15:30', endTime: '16:00', title: 'Ônibus — Chácara → Hospedagens', type: EventType.TRANSPORTE },
+      { id: '2-8', startTime: '16:00', endTime: '18:30', title: 'Banho', type: EventType.ROTINA },
+      { id: '2-9', startTime: '18:00', endTime: '18:30', title: 'Ônibus — Hospedagens → Chácara', type: EventType.TRANSPORTE },
+      { id: '2-10', startTime: '18:30', endTime: '19:30', title: 'Jantar', type: EventType.REFEICOES },
+      { 
+        id: '2-11', 
         startTime: '19:30', 
         endTime: '21:30', 
         title: 'Mensagem 3', 
@@ -90,10 +120,11 @@ export const SCHEDULE_DATA: DaySchedule[] = [
           { audience: 'Adolescentes', title: 'Sacerdócio Real', speaker: 'Webert Miranda' }
         ]
       },
-      { id: '2-10', startTime: '21:30', endTime: '22:00', title: 'Lanche', type: EventType.REFEICOES },
-      { id: '2-11', startTime: '22:00', endTime: '22:45', title: 'Livre / Convivência', type: EventType.ROTINA },
-      { id: '2-12', startTime: '22:45', endTime: '23:30', title: 'Deslocamento para quartos', type: EventType.ROTINA },
-      { id: '2-13', startTime: '23:30', endTime: '00:00', title: 'Oração e apagar as luzes', type: EventType.ROTINA },
+      { id: '2-12', startTime: '21:30', endTime: '22:00', title: 'Lanche', type: EventType.REFEICOES },
+      { id: '2-13', startTime: '22:00', endTime: '22:45', title: 'Livre / Convivência', type: EventType.ROTINA },
+      { id: '2-14', startTime: '22:30', endTime: '23:00', title: 'Ônibus — Chácara → Hospedagens', type: EventType.TRANSPORTE },
+      { id: '2-15', startTime: '22:45', endTime: '23:30', title: 'Deslocamento para quartos', type: EventType.ROTINA },
+      { id: '2-16', startTime: '23:30', endTime: '00:00', title: 'Oração e apagar as luzes', type: EventType.ROTINA },
     ]
   },
   {
@@ -101,7 +132,7 @@ export const SCHEDULE_DATA: DaySchedule[] = [
     date: '17/01',
     weekday: 'Sáb',
     events: [
-      { id: '3-1', startTime: '07:00', endTime: '08:00', title: 'Despertar', type: EventType.ROTINA },
+      { id: '3-1', startTime: '07:30', endTime: '08:00', title: 'Ônibus — Hospedagens → Chácara', type: EventType.TRANSPORTE },
       { id: '3-2', startTime: '08:00', endTime: '09:30', title: 'Café da manhã', type: EventType.REFEICOES },
       { id: '3-3', startTime: '09:30', endTime: '10:00', title: 'Leitura Bíblica', type: EventType.MENSAGENS },
       { 
@@ -116,12 +147,14 @@ export const SCHEDULE_DATA: DaySchedule[] = [
         ]
       },
       { id: '3-5', startTime: '12:30', endTime: '13:30', title: 'Almoço', type: EventType.REFEICOES },
-      { id: '3-6', startTime: '13:30', endTime: '14:00', title: 'Batismo', type: EventType.ATIVIDADES },
-      { id: '3-7', startTime: '14:00', endTime: '16:00', title: 'Gincana Jovens + Atividade Adolescentes', type: EventType.ATIVIDADES },
-      { id: '3-8', startTime: '16:00', endTime: '18:30', title: 'Banho', type: EventType.ROTINA },
-      { id: '3-9', startTime: '18:30', endTime: '19:30', title: 'Jantar', type: EventType.REFEICOES },
+      { id: '3-6', startTime: '13:30', endTime: '14:00', title: 'Batismo', type: EventType.MENSAGENS },
+      { id: '3-7', startTime: '14:00', endTime: '16:00', title: 'Atividade especial (Jovens e Adolescentes)', type: EventType.ATIVIDADES },
+      { id: '3-8', startTime: '15:30', endTime: '16:00', title: 'Ônibus — Chácara → Hospedagens', type: EventType.TRANSPORTE },
+      { id: '3-9', startTime: '16:00', endTime: '18:30', title: 'Banho', type: EventType.ROTINA },
+      { id: '3-10', startTime: '18:00', endTime: '18:30', title: 'Ônibus — Hospedagens → Chácara', type: EventType.TRANSPORTE },
+      { id: '3-11', startTime: '18:30', endTime: '19:30', title: 'Jantar', type: EventType.REFEICOES },
       { 
-        id: '3-10', 
+        id: '3-12', 
         startTime: '19:30', 
         endTime: '21:30', 
         title: 'Mensagem 5', 
@@ -131,10 +164,11 @@ export const SCHEDULE_DATA: DaySchedule[] = [
           { audience: 'Adolescentes', title: 'Discípulos de Jesus', speaker: 'Mateus Tonisso' }
         ]
       },
-      { id: '3-11', startTime: '21:30', endTime: '22:00', title: 'Lanche', type: EventType.REFEICOES },
-      { id: '3-12', startTime: '22:00', endTime: '22:45', title: 'Livre / Convivência / Louvor', type: EventType.ROTINA },
-      { id: '3-13', startTime: '22:45', endTime: '23:30', title: 'Deslocamento para quartos', type: EventType.ROTINA },
-      { id: '3-14', startTime: '23:30', endTime: '00:00', title: 'Oração e apagar as luzes', type: EventType.ROTINA },
+      { id: '3-13', startTime: '21:30', endTime: '22:00', title: 'Lanche', type: EventType.REFEICOES },
+      { id: '3-14', startTime: '22:00', endTime: '22:45', title: 'Livre / Convivência / Louvor', type: EventType.ROTINA },
+      { id: '3-15', startTime: '22:30', endTime: '23:00', title: 'Ônibus — Chácara → Hospedagens', type: EventType.TRANSPORTE },
+      { id: '3-16', startTime: '22:45', endTime: '23:30', title: 'Deslocamento para quartos', type: EventType.ROTINA },
+      { id: '3-17', startTime: '23:30', endTime: '00:00', title: 'Oração e apagar as luzes', type: EventType.ROTINA },
     ]
   },
   {
@@ -142,11 +176,11 @@ export const SCHEDULE_DATA: DaySchedule[] = [
     date: '18/01',
     weekday: 'Dom',
     events: [
-      { id: '4-1', startTime: '07:00', endTime: '08:00', title: 'Despertar', type: EventType.ROTINA },
+      { id: '4-1', startTime: '07:30', endTime: '08:00', title: 'Ônibus — Hospedagens → Chácara', type: EventType.TRANSPORTE },
       { id: '4-2', startTime: '08:00', endTime: '09:30', title: 'Café da manhã', type: EventType.REFEICOES },
       { 
         id: '4-3', 
-        startTime: '10:00', 
+        startTime: '09:30', 
         endTime: '12:00', 
         title: 'Mensagem 6', 
         type: EventType.MENSAGENS,
@@ -154,7 +188,7 @@ export const SCHEDULE_DATA: DaySchedule[] = [
           { audience: 'Todos', title: 'Sereis minhas testemunhas', speaker: 'Miguel Ma' }
         ]
       },
-      { id: '4-4', startTime: '12:00', endTime: '13:30', title: 'Almoço', type: EventType.REFEICOES },
+      { id: '4-4', startTime: '12:00', endTime: '14:00', title: 'Almoço', type: EventType.REFEICOES },
     ]
   }
 ];

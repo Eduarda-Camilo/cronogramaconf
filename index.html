@@ -4,10 +4,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Vós sois Dele - Conferência 2026</title>
+    <title>CAJ Vós Sois Dele - Jan/2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Inter:wght@400;500;600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" />
     <script>
       tailwind.config = {
@@ -18,8 +18,12 @@
               'conf-green': '#556b2f', 
               'conf-beige': '#f5f5dc', 
               'conf-brown': '#8b4513', 
-              'conf-wine': '#800000',  
-              'conf-cream': '#fffaf0', 
+              'conf-wine': '#800000',
+              'conf-wine-deep': '#1a0000',   // Fundo ultra escuro (quase preto-vinho)
+              'conf-wine-darker': '#250000', // Camada base
+              'conf-wine-card': '#350505',   // Cards e containers
+              'conf-wine-soft': '#4a0808',   // Hover e elementos de destaque
+              'conf-cream': '#f1f5f0',
               'brand-green': '#10b981',
               'brand-blue': '#3b82f6',
               'brand-amber': '#f59e0b',
@@ -28,6 +32,7 @@
             fontFamily: {
               display: ['Outfit', 'sans-serif'],
               sans: ['Inter', 'sans-serif'],
+              poppins: ['Poppins', 'sans-serif'],
             }
           }
         }
@@ -55,13 +60,16 @@
     "react-dom": "https://esm.sh/react-dom@19.0.0",
     "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/"
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "path": "https://esm.sh/path@^0.12.7",
+    "vite": "https://esm.sh/vite@^7.3.1",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
 </script>
 <link rel="stylesheet" href="/index.css">
 </head>
-  <body class="bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
+  <body class="bg-conf-cream dark:bg-conf-wine-deep text-slate-900 dark:text-conf-beige transition-colors duration-300">
     <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>

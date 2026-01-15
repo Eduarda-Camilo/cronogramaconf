@@ -5,7 +5,7 @@ import EventCard from './components/EventCard';
 import { ScheduleEvent, EventType, ParallelSession } from './types';
 
 const App: React.FC = () => {
-  const [activeDayId, setActiveDayId] = useState<string | 'all'>(SCHEDULE_DATA[0].id);
+  const [activeDayId, setActiveDayId] = useState<string | 'all'>('all');
   const [hoveredDayId, setHoveredDayId] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
   const [activeCategory, setActiveCategory] = useState<EventType | 'Tudo'>('Tudo');
@@ -16,20 +16,77 @@ const App: React.FC = () => {
 
   const PIXELS_PER_HOUR = 90; 
   const PIXELS_PER_30MIN = PIXELS_PER_HOUR / 2;
+  const START_HOUR = 7;
 
   const LOGO_URL = "https://lh3.googleusercontent.com/u/0/d/1IEGghbpjco78PtXtj1kAcWk1fBdLrWme";
   const YOUTUBE_URL = "https://www.youtube.com/channel/UCKXmodit6c2irD6w2i3o1wA";
   const THUMB_PLACEHOLDER = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=800";
 
+  // Estado para a posição da linha na vista diária (em pixels relativos ao container)
+  const [dailyTimelineTop, setDailyTimelineTop] = useState<number | null>(null);
+
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    const timer = setInterval(() => setCurrentTime(new Date()), 30000); 
     return () => clearInterval(timer);
   }, []);
+
+  // Lógica de cálculo de posição para a lista de cards
+  useEffect(() => {
+    if (activeDayId === 'all') return;
+
+    const updateDailyLinePosition = () => {
+      const now = currentTime.getHours() * 60 + currentTime.getMinutes();
+      const dayData = SCHEDULE_DATA.find(d => d.id === activeDayId);
+      if (!dayData) return;
+
+      const eventElements = document.querySelectorAll('[data-event-id]');
+      let foundTop = null;
+
+      for (const el of Array.from(eventElements)) {
+        const id = el.getAttribute('data-event-id');
+        const event = dayData.events.find(e => e.id === id);
+        if (!event) continue;
+
+        const [startH, startM] = event.startTime.split(':').map(Number);
+        const [endH, endM] = event.endTime.split(':').map(Number);
+        const startTotal = startH * 60 + startM;
+        const endTotal = endH * 60 + endM;
+
+        if (now >= startTotal && now <= endTotal) {
+          const rect = (el as HTMLElement).getBoundingClientRect();
+          const containerRect = exportRefDaily.current?.getBoundingClientRect();
+          if (containerRect) {
+            const relativeTop = rect.top - containerRect.top;
+            const progress = (now - startTotal) / (endTotal - startTotal);
+            foundTop = relativeTop + (rect.height * progress);
+          }
+          break;
+        } else if (now < startTotal && foundTop === null) {
+          // Se ainda não chegamos no evento, mas este é o próximo
+          const rect = (el as HTMLElement).getBoundingClientRect();
+          const containerRect = exportRefDaily.current?.getBoundingClientRect();
+          if (containerRect) {
+            foundTop = rect.top - containerRect.top - 10; // Fica um pouco acima do próximo card
+          }
+          break;
+        }
+      }
+      setDailyTimelineTop(foundTop);
+    };
+
+    // Pequeno delay para garantir que os cards foram renderizados
+    const timeoutId = setTimeout(updateDailyLinePosition, 100);
+    window.addEventListener('resize', updateDailyLinePosition);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', updateDailyLinePosition);
+    };
+  }, [activeDayId, currentTime, activeCategory]);
 
   useEffect(() => {
     const scrollToNow = () => {
       const hours = currentTime.getHours();
-      if (hours >= 7 && hours < 24) {
+      if (hours >= START_HOUR && hours < 24) {
         const line = document.getElementById('current-time-line');
         if (line) {
           line.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -42,7 +99,7 @@ const App: React.FC = () => {
 
   const getTimePosition = (timeStr: string) => {
     const [hours, minutes] = timeStr.split(':').map(Number);
-    return (hours - 7) * PIXELS_PER_HOUR + (minutes / 60) * PIXELS_PER_HOUR;
+    return (hours - START_HOUR) * PIXELS_PER_HOUR + (minutes / 60) * PIXELS_PER_HOUR;
   };
 
   const getEventStyle = (event: ScheduleEvent, dayEvents: ScheduleEvent[]) => {
@@ -89,6 +146,14 @@ const App: React.FC = () => {
     const day = SCHEDULE_DATA.find(d => d.id === activeDayId);
     return day ? `${getFullWeekday(day.weekday)} ${day.date}`.toUpperCase() : '';
   }, [activeDayId]);
+
+  const handleCategoryClick = (category: EventType | 'Tudo') => {
+    if (activeCategory === category) {
+      setActiveCategory('Tudo');
+    } else {
+      setActiveCategory(category);
+    }
+  };
 
   const handleExport = async () => {
     const targetRef = activeDayId === 'all' ? exportRefAll.current : exportRefDaily.current;
@@ -137,13 +202,14 @@ const App: React.FC = () => {
   const currentIndicatorPos = useMemo(() => {
     const hours = currentTime.getHours();
     const minutes = currentTime.getMinutes();
-    if (hours < 7 || hours >= 24) return null;
-    return (hours - 7) * PIXELS_PER_HOUR + (minutes / 60) * PIXELS_PER_HOUR;
+    const seconds = currentTime.getSeconds();
+    if (hours < START_HOUR || hours >= 24) return null;
+    return (hours - START_HOUR) * PIXELS_PER_HOUR + (minutes / 60) * PIXELS_PER_HOUR + (seconds / 3600) * PIXELS_PER_HOUR;
   }, [currentTime]);
 
   const timeLabels = useMemo(() => {
     const labels = [];
-    for (let hour = 7; hour <= 23; hour++) {
+    for (let hour = START_HOUR; hour <= 23; hour++) {
       labels.push(`${hour.toString().padStart(2, '0')}:00`);
       labels.push(`${hour.toString().padStart(2, '0')}:30`);
     }
@@ -182,29 +248,50 @@ const App: React.FC = () => {
 
       <div className="flex flex-col gap-6">
         {selectedEvent?.sessions && selectedEvent.sessions.length > 0 ? (
-          selectedEvent.sessions.map((session, idx) => (
-            <div key={idx} className="bg-slate-50 dark:bg-conf-wine-card rounded-3xl overflow-hidden border border-slate-100 dark:border-conf-wine/30 flex flex-col group">
-              <div className="relative aspect-video w-full overflow-hidden bg-slate-200 dark:bg-conf-wine-deep">
-                <img src={THUMB_PLACEHOLDER} className="w-full h-full object-cover" alt="Preview" />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
-                  <span className="material-symbols-outlined text-white text-5xl opacity-80 font-variation-settings-fill">play_circle</span>
+          selectedEvent.sessions.map((session, idx) => {
+            const isMensagem = selectedEvent.type === EventType.MENSAGENS;
+            return (
+              <div key={idx} className="bg-slate-50 dark:bg-conf-wine-card rounded-3xl overflow-hidden border border-slate-100 dark:border-conf-wine/30 flex flex-col group">
+                {isMensagem && (
+                  <div className="relative aspect-video w-full overflow-hidden bg-slate-200 dark:bg-conf-wine-deep">
+                    <img src={THUMB_PLACEHOLDER} className="w-full h-full object-cover" alt="Preview" />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
+                      <span className="material-symbols-outlined text-white text-5xl opacity-80 font-variation-settings-fill">play_circle</span>
+                    </div>
+                  </div>
+                )}
+                <div className="p-5">
+                  <span className={`text-[9px] font-bold uppercase tracking-[0.2em] mb-2 block ${
+                    session.audience === 'Jovens' ? 'text-emerald-600 dark:text-emerald-400' : 
+                    session.audience === 'Adolescentes' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-conf-beige/50'
+                  }`}>Público: {session.audience}</span>
+                  <h3 className="text-lg font-semibold text-slate-800 dark:text-conf-beige mb-1 font-poppins uppercase">{session.title}</h3>
+                  {session.speaker && <p className="text-xs font-bold text-slate-500 dark:text-conf-beige/60 italic mb-4">Palestrante: {session.speaker}</p>}
+                  {isMensagem && (
+                    <a 
+                      href={YOUTUBE_URL} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="flex items-center justify-center gap-3 w-full bg-[#FF0000] text-white px-4 py-4 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-[#CC0000] transition-all shadow-lg active:scale-95 font-poppins group/yt"
+                    >
+                      <svg className="w-5 h-5 fill-current flex-shrink-0" viewBox="0 0 24 24">
+                        <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
+                      </svg>
+                      <span className="whitespace-nowrap">Assistir no YouTube</span>
+                    </a>
+                  )}
                 </div>
               </div>
-              <div className="p-5">
-                <span className={`text-[9px] font-bold uppercase tracking-[0.2em] mb-2 block ${
-                  session.audience === 'Jovens' ? 'text-emerald-600 dark:text-emerald-400' : 
-                  session.audience === 'Adolescentes' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-conf-beige/50'
-                }`}>Público: {session.audience}</span>
-                <h3 className="text-lg font-semibold text-slate-800 dark:text-conf-beige mb-1 font-poppins uppercase">{session.title}</h3>
-                {session.speaker && <p className="text-xs font-bold text-slate-500 dark:text-conf-beige/60 italic mb-4">Palestrante: {session.speaker}</p>}
-                <a href={YOUTUBE_URL} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full bg-slate-900 dark:bg-conf-beige text-white dark:text-conf-wine-deep py-3 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-conf-wine dark:hover:bg-conf-wine hover:text-white transition-all shadow-lg active:scale-95 font-poppins">Assistir no YouTube</a>
-              </div>
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="py-12 text-center bg-slate-50 dark:bg-conf-wine-card rounded-3xl border border-dashed border-slate-200 dark:border-conf-wine/30">
             <div className="w-16 h-16 bg-white dark:bg-conf-wine-deep rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-              <span className="material-symbols-outlined text-3xl text-slate-300 dark:text-conf-beige/30">{selectedEvent?.type === EventType.TRANSPORTE ? 'directions_bus' : 'event_available'}</span>
+              <span className="material-symbols-outlined text-3xl text-slate-300 dark:text-conf-beige/30">
+                {selectedEvent?.type === EventType.TRANSPORTE ? 'directions_bus' : 
+                 selectedEvent?.type === EventType.REFEICOES ? 'restaurant' : 
+                 'event_available'}
+              </span>
             </div>
             <p className="text-slate-400 dark:text-conf-beige/40 font-bold uppercase text-[9px] tracking-widest font-poppins">Evento Geral</p>
           </div>
@@ -223,26 +310,37 @@ const App: React.FC = () => {
         />
       )}
 
-      <header className="w-full bg-white dark:bg-conf-wine-darker border-b border-slate-200 dark:border-conf-wine/30 sticky top-0 z-[60] pt-6 pb-4">
-        <div className="max-w-6xl mx-auto px-4 overflow-hidden">
-          <div className="flex flex-row items-start justify-between mb-6">
+      {/* HEADER */}
+      <header className="w-full bg-white dark:bg-conf-wine-darker border-b border-slate-200 dark:border-conf-wine/30 sticky top-0 z-[60] pt-4 sm:pt-6 pb-4">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="sm:hidden flex flex-col items-center mb-4">
+            <div className="w-28 mb-3">
+              <img src={LOGO_URL} className="max-w-full h-auto object-contain mx-auto" alt="Logo" />
+            </div>
+            <h1 className="text-xl font-semibold text-slate-800 dark:text-conf-beige uppercase tracking-tight mb-2 font-poppins text-center">CAJ Vós Sois Dele</h1>
+            <p className="text-[11px] font-medium text-slate-500 dark:text-conf-beige/70 leading-relaxed text-center px-2">
+              Este site é o seu <span className="font-bold text-conf-wine dark:text-conf-beige">GUIA DIGITAL</span> oficial da conferência.
+            </p>
+          </div>
+
+          <div className="hidden sm:flex flex-row items-start justify-between mb-6">
             <div className="flex-grow text-left mr-6">
-              <h1 className="text-xl sm:text-3xl font-semibold text-slate-800 dark:text-conf-beige uppercase tracking-tight mb-2 font-poppins">CAJ Vós Sois Dele</h1>
-              <p className="text-[11px] sm:text-[13px] font-medium text-slate-500 dark:text-conf-beige/70 leading-relaxed block max-w-none">
+              <h1 className="text-3xl font-semibold text-slate-800 dark:text-conf-beige uppercase tracking-tight mb-2 font-poppins">CAJ Vós Sois Dele</h1>
+              <p className="text-[13px] font-medium text-slate-500 dark:text-conf-beige/70 leading-relaxed block max-w-none">
                 Este site é o seu <span className="font-bold text-conf-wine dark:text-conf-beige">GUIA DIGITAL</span> oficial da conferência. 
                 Acompanhe os horários em tempo real, verifique os locais, acesse as mensagens no youtube durante todo o evento.
               </p>
             </div>
-            <div className="w-24 sm:w-44 flex-shrink-0 mt-1 flex justify-end">
-              <img src={LOGO_URL} className="max-w-full h-auto object-contain" />
+            <div className="w-48 flex-shrink-0 mt-1 flex justify-end">
+              <img src={LOGO_URL} className="max-w-full h-auto object-contain" alt="Logo" />
             </div>
           </div>
           
-          <div className="relative w-full overflow-hidden">
-            <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 px-1 snap-x touch-pan-x">
+          <div className="relative w-full">
+            <div className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide pb-2 px-1 snap-x touch-pan-x whitespace-nowrap -mx-4 sm:mx-0 px-4 sm:px-0">
               <button 
                 onClick={() => setActiveDayId('all')} 
-                className={`flex-shrink-0 px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border-2 snap-start ${
+                className={`flex-shrink-0 px-6 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border-2 snap-start inline-block ${
                   activeDayId === 'all' 
                     ? 'bg-conf-green border-conf-green text-white shadow-md' 
                     : 'bg-white dark:bg-conf-wine-card border-transparent text-slate-400 dark:text-conf-beige/40'
@@ -255,7 +353,7 @@ const App: React.FC = () => {
                 <button 
                   key={day.id} 
                   onClick={() => setActiveDayId(day.id)} 
-                  className={`flex-shrink-0 px-6 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border-2 snap-start ${
+                  className={`flex-shrink-0 px-6 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border-2 snap-start inline-block ${
                     activeDayId === day.id 
                       ? 'bg-conf-green border-conf-green text-white shadow-md' 
                       : 'bg-white dark:bg-conf-wine-card border-transparent text-slate-400 dark:text-conf-beige/40'
@@ -264,36 +362,50 @@ const App: React.FC = () => {
                   {day.weekday} {day.date}
                 </button>
               ))}
-              <div className="flex-shrink-0 w-8 h-1"></div>
+              <div className="flex-shrink-0 w-4 h-1 sm:hidden"></div>
             </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-slate-800 dark:text-conf-beige text-lg sm:text-2xl uppercase font-poppins">{activeTitle}</h2>
-          <button onClick={handleExport} disabled={isExporting} className="flex items-center gap-2 bg-conf-wine text-white px-4 py-2.5 rounded-xl text-[9px] font-bold uppercase tracking-widest shadow-md active:scale-95 transition-transform disabled:opacity-50">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          <h2 className="font-semibold text-slate-800 dark:text-conf-beige text-xl sm:text-2xl uppercase font-poppins">{activeTitle}</h2>
+          
+          <button 
+            onClick={handleExport} 
+            disabled={isExporting} 
+            className="hidden sm:flex items-center justify-center gap-2 bg-conf-wine text-white px-4 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-md active:scale-95 transition-transform disabled:opacity-50 sm:w-auto"
+          >
             <span className="material-symbols-outlined text-sm">{isExporting ? 'sync' : 'download'}</span>
             {isExporting ? 'Processando...' : 'BAIXAR CRONOGRAMA'}
           </button>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-2 mb-8">
+        <div className="flex flex-wrap justify-start sm:justify-center gap-2 mb-6 -mx-1 px-1">
           {categoryLegend.map((cat) => (
-            <button key={cat.type} onClick={() => setActiveCategory(cat.type as any)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 transition-all ${activeCategory === cat.type ? `${cat.activeBg} ${cat.activeBorder} scale-105 shadow-md` : 'border-slate-100 dark:border-conf-wine/30 bg-white dark:bg-conf-wine-darker'}`}>
+            <button key={cat.type} onClick={() => handleCategoryClick(cat.type as any)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 transition-all flex-shrink-0 ${activeCategory === cat.type ? `${cat.activeBg} ${cat.activeBorder} scale-105 shadow-md` : 'border-slate-100 dark:border-conf-wine/30 bg-white dark:bg-conf-wine-darker'}`}>
               <div className={`w-2 h-2 rounded-full ${cat.dot}`} />
               <span className={`text-[8px] font-semibold uppercase tracking-widest ${activeCategory === cat.type ? 'text-slate-900 dark:text-conf-beige' : 'text-slate-500 dark:text-conf-beige/40'}`}>{cat.type}</span>
             </button>
           ))}
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-6 relative transition-all duration-500 ease-in-out">
-          <div className={`transition-all duration-500 ease-in-out ${selectedEvent ? 'lg:w-1/2' : 'w-full'}`}>
+        <button 
+          onClick={handleExport} 
+          disabled={isExporting} 
+          className="flex sm:hidden items-center justify-center gap-2 bg-conf-wine text-white px-4 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-md active:scale-95 transition-transform disabled:opacity-50 w-full mb-8"
+        >
+          <span className="material-symbols-outlined text-sm">{isExporting ? 'sync' : 'download'}</span>
+          {isExporting ? 'Processando...' : 'BAIXAR CRONOGRAMA'}
+        </button>
+
+        <div className="flex flex-col lg:flex-row gap-6 relative items-start">
+          <div className={`transition-all duration-500 ease-in-out ${selectedEvent ? 'lg:w-[70%]' : 'w-full'} lg:pr-2`}>
             {activeDayId === 'all' ? (
               <div ref={exportRefAll} className="rounded-3xl border border-slate-200 dark:border-conf-wine/30 bg-white dark:bg-conf-wine-deep shadow-xl overflow-hidden">
                 <div className="w-full relative p-2 sm:p-4 overflow-x-auto">
-                  <div className="flex mb-4 border-b border-slate-100 dark:border-conf-wine/20 pb-4">
+                  <div className="flex mb-4 border-b border-slate-100 dark:border-conf-wine/20 pb-4 min-w-[500px]">
                     <div className="w-12 sm:w-16 flex-shrink-0" />
                     {SCHEDULE_DATA.map(day => (
                       <div 
@@ -332,7 +444,7 @@ const App: React.FC = () => {
                       </div>
                     ))}
                   </div>
-                  <div className="relative flex">
+                  <div className="relative flex min-w-[500px]">
                     <div className="w-12 sm:w-16 flex-shrink-0">
                       {timeLabels.map(l => <div key={l} style={{ height: `${PIXELS_PER_30MIN}px` }} className="relative"><span className="absolute -top-2 right-2 text-[8px] font-semibold text-slate-400 dark:text-conf-beige/30">{l}</span></div>)}
                     </div>
@@ -386,7 +498,7 @@ const App: React.FC = () => {
                         </div>
                       ))}
                       {currentIndicatorPos !== null && (
-                        <div id="current-time-line" className="absolute left-0 right-0 z-[80] flex items-center pointer-events-none" style={{ top: `${currentIndicatorPos}px` }}>
+                        <div id="current-time-line" className="absolute left-0 right-0 z-[80] flex items-center pointer-events-none transition-all duration-300 ease-linear" style={{ top: `${currentIndicatorPos}px` }}>
                           <div className="bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-r-md shadow-md animate-pulse whitespace-nowrap -ml-[48px] mr-2 flex items-center gap-1 uppercase tracking-tighter">
                             AGORA <span className="opacity-70">{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                           </div>
@@ -399,38 +511,42 @@ const App: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div ref={exportRefDaily} className="flex flex-col gap-4 relative">
-                {currentIndicatorPos !== null && (
-                   <div 
-                    id="current-time-line" 
-                    className="absolute -left-6 right-0 z-[80] flex items-center pointer-events-none transition-all duration-300" 
-                    style={{ top: `${currentIndicatorPos}px` }}
-                  >
-                    <div className="bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-r-md shadow-md animate-pulse whitespace-nowrap mr-2 flex items-center gap-1 uppercase tracking-tighter">
-                      AGORA <span className="opacity-70">{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                    <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
-                    <div className="flex-grow h-[1.5px] bg-red-500 shadow-sm opacity-60" />
-                  </div>
-                )}
-                
-                <div className="flex flex-col gap-4">
-                  {SCHEDULE_DATA.find(d => d.id === activeDayId)?.events.filter(e => activeCategory === 'Tudo' || e.type === activeCategory).map(event => (
+              <div ref={exportRefDaily} className="flex flex-col gap-4 relative w-full">
+                <div className="flex flex-col gap-4 pb-20 relative">
+                   {/* Linha do Tempo nas Listas Diárias - Posição Calculada */}
+                   {dailyTimelineTop !== null && (
                     <div 
-                      key={event.id} 
-                      onClick={() => setSelectedEvent(event)} 
-                      className={`transition-all ${selectedEvent?.id === event.id ? 'ring-2 ring-conf-wine rounded-3xl' : ''}`}
+                      id="current-time-line" 
+                      className="absolute left-0 right-0 z-[80] flex items-center pointer-events-none transition-all duration-300 ease-linear" 
+                      style={{ top: `${dailyTimelineTop}px` }}
                     >
-                      <EventCard event={event} />
+                      <div className="bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-r-md shadow-md animate-pulse whitespace-nowrap mr-2 flex items-center gap-1 uppercase tracking-tighter">
+                        AGORA <span className="opacity-70">{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                      <div className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                      <div className="flex-grow h-[1px] bg-red-500 shadow-sm opacity-50" />
                     </div>
-                  ))}
+                  )}
+
+                  <div className="relative">
+                    {SCHEDULE_DATA.find(d => d.id === activeDayId)?.events.filter(e => activeCategory === 'Tudo' || e.type === activeCategory).map(event => (
+                      <div 
+                        key={event.id} 
+                        data-event-id={event.id}
+                        onClick={() => setSelectedEvent(event)} 
+                        className={`transition-all ${selectedEvent?.id === event.id ? 'ring-2 ring-conf-wine rounded-3xl' : ''}`}
+                      >
+                        <EventCard event={event} />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
           </div>
 
-          <aside className={`hidden lg:flex transition-all duration-500 ease-in-out bg-white dark:bg-conf-wine-deep border-slate-200 dark:border-conf-wine/30 ${selectedEvent ? 'w-1/2 opacity-100 flex-shrink-0 visible border-l lg:border-l-0 lg:rounded-3xl' : 'w-0 opacity-0 invisible overflow-hidden absolute right-0'}`}>
-            <div className="w-full lg:sticky lg:top-[120px] h-fit">
+          <aside className={`hidden lg:flex transition-all duration-500 ease-in-out ${selectedEvent ? 'lg:w-[30%] opacity-100 visible sticky top-[120px] max-h-[calc(100vh-140px)]' : 'w-0 opacity-0 invisible overflow-hidden absolute right-0'}`}>
+            <div className="w-full h-full bg-white dark:bg-conf-wine-deep border border-slate-200 dark:border-conf-wine/30 lg:rounded-3xl shadow-lg overflow-hidden flex flex-col">
               {selectedEvent && <SidePanelContent />}
             </div>
           </aside>

@@ -11,6 +11,7 @@ const App: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<EventType | 'Tudo'>('Tudo');
   const exportRefAll = useRef<HTMLDivElement>(null);
   const exportRefDaily = useRef<HTMLDivElement>(null);
+  const cardScrollRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -22,15 +23,20 @@ const App: React.FC = () => {
   const YOUTUBE_URL = "https://www.youtube.com/channel/UCKXmodit6c2irD6w2i3o1wA";
   const THUMB_PLACEHOLDER = "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=800";
 
-  // Estado para a posição da linha na vista diária (em pixels relativos ao container)
   const [dailyTimelineTop, setDailyTimelineTop] = useState<number | null>(null);
+
+  // Reset do scroll do card lateral ao trocar de evento
+  useEffect(() => {
+    if (cardScrollRef.current) {
+      cardScrollRef.current.scrollTop = 0;
+    }
+  }, [selectedEvent]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 30000); 
     return () => clearInterval(timer);
   }, []);
 
-  // Lógica de cálculo de posição para a lista de cards
   useEffect(() => {
     if (activeDayId === 'all') return;
 
@@ -62,11 +68,10 @@ const App: React.FC = () => {
           }
           break;
         } else if (now < startTotal && foundTop === null) {
-          // Se ainda não chegamos no evento, mas este é o próximo
           const rect = (el as HTMLElement).getBoundingClientRect();
           const containerRect = exportRefDaily.current?.getBoundingClientRect();
           if (containerRect) {
-            foundTop = rect.top - containerRect.top - 10; // Fica um pouco acima do próximo card
+            foundTop = rect.top - containerRect.top - 10;
           }
           break;
         }
@@ -74,7 +79,6 @@ const App: React.FC = () => {
       setDailyTimelineTop(foundTop);
     };
 
-    // Pequeno delay para garantir que os cards foram renderizados
     const timeoutId = setTimeout(updateDailyLinePosition, 100);
     window.addEventListener('resize', updateDailyLinePosition);
     return () => {
@@ -226,82 +230,88 @@ const App: React.FC = () => {
   ];
 
   const SidePanelContent = () => (
-    <div className="h-full flex flex-col p-6 overflow-y-auto scrollbar-hide">
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="bg-slate-100 dark:bg-conf-wine-soft text-slate-500 dark:text-conf-beige/70 text-[9px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-              {selectedEvent?.startTime} — {selectedEvent?.endTime}
-            </span>
-          </div>
-          <h2 className="text-xl sm:text-2xl font-semibold text-slate-800 dark:text-conf-beige leading-tight font-poppins uppercase tracking-wide">
-            {selectedEvent?.title}
-          </h2>
-        </div>
-        <button 
-          onClick={() => setSelectedEvent(null)}
-          className="w-10 h-10 rounded-full bg-slate-50 dark:bg-conf-wine-soft flex items-center justify-center text-slate-400 dark:text-conf-beige/50 hover:text-slate-600 transition-colors"
-        >
-          <span className="material-symbols-outlined text-xl">close</span>
-        </button>
-      </div>
-
-      <div className="flex flex-col gap-6">
-        {selectedEvent?.sessions && selectedEvent.sessions.length > 0 ? (
-          selectedEvent.sessions.map((session, idx) => {
-            const isMensagem = selectedEvent.type === EventType.MENSAGENS;
-            return (
-              <div key={idx} className="bg-slate-50 dark:bg-conf-wine-card rounded-3xl overflow-hidden border border-slate-100 dark:border-conf-wine/30 flex flex-col group">
-                {isMensagem && (
-                  <div className="relative aspect-video w-full overflow-hidden bg-slate-200 dark:bg-conf-wine-deep">
-                    <img src={THUMB_PLACEHOLDER} className="w-full h-full object-cover" alt="Preview" />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
-                      <span className="material-symbols-outlined text-white text-5xl opacity-80 font-variation-settings-fill">play_circle</span>
-                    </div>
-                  </div>
-                )}
-                <div className="p-5">
-                  <span className={`text-[9px] font-bold uppercase tracking-[0.2em] mb-2 block ${
-                    session.audience === 'Jovens' ? 'text-emerald-600 dark:text-emerald-400' : 
-                    session.audience === 'Adolescentes' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-conf-beige/50'
-                  }`}>Público: {session.audience}</span>
-                  <h3 className="text-lg font-semibold text-slate-800 dark:text-conf-beige mb-1 font-poppins uppercase">{session.title}</h3>
-                  {session.speaker && <p className="text-xs font-bold text-slate-500 dark:text-conf-beige/60 italic mb-4">Palestrante: {session.speaker}</p>}
-                  {isMensagem && (
-                    <a 
-                      href={YOUTUBE_URL} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="flex items-center justify-center gap-3 w-full bg-[#FF0000] text-white px-4 py-4 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-[#CC0000] transition-all shadow-lg active:scale-95 font-poppins group/yt"
-                    >
-                      <svg className="w-5 h-5 fill-current flex-shrink-0" viewBox="0 0 24 24">
-                        <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
-                      </svg>
-                      <span className="whitespace-nowrap">Assistir no YouTube</span>
-                    </a>
-                  )}
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          <div className="py-12 text-center bg-slate-50 dark:bg-conf-wine-card rounded-3xl border border-dashed border-slate-200 dark:border-conf-wine/30">
-            <div className="w-16 h-16 bg-white dark:bg-conf-wine-deep rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-              <span className="material-symbols-outlined text-3xl text-slate-300 dark:text-conf-beige/30">
-                {selectedEvent?.type === EventType.TRANSPORTE ? 'directions_bus' : 
-                 selectedEvent?.type === EventType.REFEICOES ? 'restaurant' : 
-                 'event_available'}
+    <div ref={cardScrollRef} className="h-full flex flex-col overflow-y-auto scrollbar-hide relative">
+      {/* HEADER FIXO DO CARD (Título e Botão de Fechar) */}
+      <div className="sticky top-0 z-30 bg-white dark:bg-conf-wine-deep px-6 pt-6 pb-4 border-b border-slate-100 dark:border-conf-wine/20 shadow-sm">
+        <div className="flex justify-between items-start">
+          <div className="flex-1 pr-2">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="bg-slate-100 dark:bg-conf-wine-soft text-slate-500 dark:text-conf-beige/70 text-[9px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                {selectedEvent?.startTime} — {selectedEvent?.endTime}
               </span>
             </div>
-            <p className="text-slate-400 dark:text-conf-beige/40 font-bold uppercase text-[9px] tracking-widest font-poppins">Evento Geral</p>
+            <h2 className="text-xl sm:text-2xl font-semibold text-slate-800 dark:text-conf-beige leading-tight font-poppins uppercase tracking-wide">
+              {selectedEvent?.title}
+            </h2>
           </div>
-        )}
+          <button 
+            onClick={() => setSelectedEvent(null)}
+            className="w-10 h-10 flex-shrink-0 rounded-full bg-slate-50 dark:bg-conf-wine-soft flex items-center justify-center text-slate-400 dark:text-conf-beige/50 hover:text-slate-600 transition-colors"
+          >
+            <span className="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+      </div>
+
+      {/* CONTEÚDO DO CORPO (Rola sob o header) */}
+      <div className="p-6">
+        <div className="flex flex-col gap-6">
+          {selectedEvent?.sessions && selectedEvent.sessions.length > 0 ? (
+            selectedEvent.sessions.map((session, idx) => {
+              const isMensagem = selectedEvent.type === EventType.MENSAGENS;
+              return (
+                <div key={idx} className="bg-slate-50 dark:bg-conf-wine-card rounded-3xl overflow-hidden border border-slate-100 dark:border-conf-wine/30 flex flex-col group">
+                  {isMensagem && (
+                    <div className="relative aspect-video w-full overflow-hidden bg-slate-200 dark:bg-conf-wine-deep">
+                      <img src={THUMB_PLACEHOLDER} className="w-full h-full object-cover" alt="Preview" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
+                        <span className="material-symbols-outlined text-white text-5xl opacity-80 font-variation-settings-fill">play_circle</span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="p-5">
+                    <span className={`text-[9px] font-bold uppercase tracking-[0.2em] mb-2 block ${
+                      session.audience === 'Jovens' ? 'text-emerald-600 dark:text-emerald-400' : 
+                      session.audience === 'Adolescentes' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-conf-beige/50'
+                    }`}>Público: {session.audience}</span>
+                    <h3 className="text-lg font-semibold text-slate-800 dark:text-conf-beige mb-1 font-poppins uppercase">{session.title}</h3>
+                    {session.speaker && <p className="text-xs font-bold text-slate-500 dark:text-conf-beige/60 italic mb-4">Palestrante: {session.speaker}</p>}
+                    {isMensagem && (
+                      <a 
+                        href={YOUTUBE_URL} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="flex items-center justify-center gap-3 w-full bg-[#FF0000] text-white px-4 py-4 rounded-2xl text-[10px] font-bold uppercase tracking-widest hover:bg-[#CC0000] transition-all shadow-lg active:scale-95 font-poppins group/yt"
+                      >
+                        <svg className="w-5 h-5 fill-current flex-shrink-0" viewBox="0 0 24 24">
+                          <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
+                        </svg>
+                        <span className="whitespace-nowrap">Assistir no YouTube</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="py-12 text-center bg-slate-50 dark:bg-conf-wine-card rounded-3xl border border-dashed border-slate-200 dark:border-conf-wine/30">
+              <div className="w-16 h-16 bg-white dark:bg-conf-wine-deep rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                <span className="material-symbols-outlined text-3xl text-slate-300 dark:text-conf-beige/30">
+                  {selectedEvent?.type === EventType.TRANSPORTE ? 'directions_bus' : 
+                   selectedEvent?.type === EventType.REFEICOES ? 'restaurant' : 
+                   'event_available'}
+                </span>
+              </div>
+              <p className="text-slate-400 dark:text-conf-beige/40 font-bold uppercase text-[9px] tracking-widest font-poppins">Evento Geral</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-conf-cream dark:bg-conf-wine-deep transition-colors font-sans text-slate-900 dark:text-conf-beige relative overflow-x-hidden">
+    <div className="min-h-screen bg-conf-cream dark:bg-conf-wine-deep transition-colors font-sans text-slate-900 dark:text-conf-beige relative">
       {/* MOBILE BACKDROP */}
       {selectedEvent && (
         <div 
@@ -310,7 +320,7 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* HEADER */}
+      {/* HEADER PRINCIPAL */}
       <header className="w-full bg-white dark:bg-conf-wine-darker border-b border-slate-200 dark:border-conf-wine/30 sticky top-0 z-[60] pt-4 sm:pt-6 pb-4">
         <div className="max-w-6xl mx-auto px-4">
           <div className="sm:hidden flex flex-col items-center mb-4">
@@ -337,7 +347,7 @@ const App: React.FC = () => {
           </div>
           
           <div className="relative w-full">
-            <div className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide pb-2 px-1 snap-x touch-pan-x whitespace-nowrap -mx-4 sm:mx-0 px-4 sm:px-0">
+            <div className="flex flex-nowrap gap-4 overflow-x-auto overflow-y-hidden scroll-smooth scrollbar-hide pb-2 px-1 snap-x touch-pan-x whitespace-nowrap -mx-4 sm:mx-0 px-4 sm:px-0" style={{ WebkitOverflowScrolling: 'touch' }}>
               <button 
                 onClick={() => setActiveDayId('all')} 
                 className={`flex-shrink-0 px-6 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border-2 snap-start inline-block ${
@@ -362,7 +372,7 @@ const App: React.FC = () => {
                   {day.weekday} {day.date}
                 </button>
               ))}
-              <div className="flex-shrink-0 w-4 h-1 sm:hidden"></div>
+              <div className="flex-shrink-0 w-8 h-1 sm:hidden"></div>
             </div>
           </div>
         </div>
@@ -400,7 +410,9 @@ const App: React.FC = () => {
           {isExporting ? 'Processando...' : 'BAIXAR CRONOGRAMA'}
         </button>
 
-        <div className="flex flex-col lg:flex-row gap-6 relative items-start">
+        <div className="flex flex-col lg:flex-row gap-6 items-start relative">
+          
+          {/* COLUNA ESQUERDA (CRONOGRAMA) */}
           <div className={`transition-all duration-500 ease-in-out ${selectedEvent ? 'lg:w-[70%]' : 'w-full'} lg:pr-2`}>
             {activeDayId === 'all' ? (
               <div ref={exportRefAll} className="rounded-3xl border border-slate-200 dark:border-conf-wine/30 bg-white dark:bg-conf-wine-deep shadow-xl overflow-hidden">
@@ -513,7 +525,6 @@ const App: React.FC = () => {
             ) : (
               <div ref={exportRefDaily} className="flex flex-col gap-4 relative w-full">
                 <div className="flex flex-col gap-4 pb-20 relative">
-                   {/* Linha do Tempo nas Listas Diárias - Posição Calculada */}
                    {dailyTimelineTop !== null && (
                     <div 
                       id="current-time-line" 
@@ -545,12 +556,14 @@ const App: React.FC = () => {
             )}
           </div>
 
-          <aside className={`hidden lg:flex transition-all duration-500 ease-in-out ${selectedEvent ? 'lg:w-[30%] opacity-100 visible sticky top-[120px] max-h-[calc(100vh-140px)]' : 'w-0 opacity-0 invisible overflow-hidden absolute right-0'}`}>
-            <div className="w-full h-full bg-white dark:bg-conf-wine-deep border border-slate-200 dark:border-conf-wine/30 lg:rounded-3xl shadow-lg overflow-hidden flex flex-col">
+          {/* COLUNA DIREITA (STICKY DESKTOP) */}
+          <aside className={`hidden lg:flex transition-all duration-500 ease-in-out sticky top-[110px] self-start ${selectedEvent ? 'lg:w-[30%] opacity-100 visible' : 'w-0 opacity-0 invisible overflow-hidden absolute right-0'}`}>
+            <div className="w-full bg-white dark:bg-conf-wine-deep border border-slate-200 dark:border-conf-wine/30 lg:rounded-3xl shadow-lg flex flex-col max-h-[calc(100vh-130px)] overflow-hidden">
               {selectedEvent && <SidePanelContent />}
             </div>
           </aside>
 
+          {/* PANEL MOBILE */}
           <aside 
             className={`lg:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white dark:bg-conf-wine-darker rounded-t-[2.5rem] shadow-2xl transition-transform duration-500 ease-in-out transform ${selectedEvent ? 'translate-y-0' : 'translate-y-full'}`}
             style={{ maxHeight: '85vh' }}
